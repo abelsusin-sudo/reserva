@@ -13,7 +13,7 @@ let mesCalendariFi = new Date().getMonth();
 let anyCalendariFi = new Date().getFullYear();
 
 // Configuració - URL de Google Apps Script
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLdeqEBF-XWAWwojTUx9FaCiPC9Tn_YY42cvwSJPrEEOEB3Y--2X-tVSBVte_GS8SG/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyKqDtcd-f470OEk4lCr5W9idj6vnIQYU0_2jK3BaLy1cCvF7qaeAchRSkqiSH7Ixd9WA/exec';
 
 // Funcionalitat de navegació entre seccions
 function mostrarSeccio(seccioId, elementClicat) {
@@ -105,7 +105,7 @@ async function obtenirDadesReals(accio, parametres) {
             urlParams = `immoble=${parametres.immoble || 'Loft+Barcelona'}`;
         }
         const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(
-            `https://script.google.com/macros/s/AKfycbxLdeqEBF-XWAWwojTUx9FaCiPC9Tn_YY42cvwSJPrEEOEB3Y--2X-tVSBVte_GS8SG/exec?action=${accio}&immoble=${parametres.immoble || 'Loft+Barcelona'}`
+            `https://script.google.com/macros/s/AKfycbyKqDtcd-f470OEk4lCr5W9idj6vnIQYU0_2jK3BaLy1cCvF7qaeAchRSkqiSH7Ixd9WA/exec?action=${accio}&immoble=${parametres.immoble || 'Loft+Barcelona'}`
         );
         
         const response = await fetch(proxyUrl);
