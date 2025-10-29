@@ -44,109 +44,80 @@ function mostrarSeccio(seccioId, elementClicat) {
     }
 }
 
-// Funció per fer peticions al Google Apps Script
+// Funció per fer peticions al Google Apps Script (ACTUALITZADA)
 async function ferPeticioGS(accio, parametres = {}) {
     try {
         console.log(`🔗 Fent petició ${accio}:`, parametres);
         
-        // Per a la reserva, enviem les dades de manera especial
-        if (accio === 'ferReserva') {
-            const dadesReserva = new URLSearchParams();
-            Object.keys(parametres).forEach(key => {
-                dadesReserva.append(key, parametres[key]);
-            });
-            
-            const urlCompleta = `${SCRIPT_URL}?action=${accio}&${dadesReserva.toString()}`;
-            console.log('📤 URL reserva:', urlCompleta);
-            
-            const response = await fetch(urlCompleta, {
-                method: 'GET',
-                mode: 'no-cors'
-            });
-            
-            return { exit: true, missatge: 'Reserva enviada correctament' };
-        } else {
-            // Per a les altres accions
-            const url = new URL(SCRIPT_URL);
-            url.searchParams.append('action', accio);
-            
-            Object.keys(parametres).forEach(key => {
+        const url = new URL(SCRIPT_URL);
+        url.searchParams.append('action', accio);
+        
+        Object.keys(parametres).forEach(key => {
+            if (parametres[key] !== null && parametres[key] !== undefined) {
                 url.searchParams.append(key, parametres[key]);
-            });
-            
-            console.log('🔗 URL petició:', url.toString());
-            
-            const response = await fetch(url.toString(), {
-                method: 'GET',
-                mode: 'no-cors'
-            });
-            
-            return await obtenirDadesReals(accio, parametres);
+            }
+        });
+        
+        console.log('🔗 URL petició:', url.toString());
+        
+        const response = await fetch(url.toString());
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Resposta rebuda:', data);
+            return data;
+        } else {
+            throw new Error(`Error HTTP: ${response.status}`);
         }
+        
     } catch (error) {
         console.log('❌ Error en ferPeticioGS:', error);
+        
+        // En cas d'error, provar amb una altra estratègia per a reserves
+        if (accio === 'ferReserva') {
+            try {
+                return await ferPeticioReservaAlternativa(parametres);
+            } catch (fallbackError) {
+                console.log('❌ Error també en mètode alternatiu:', fallbackError);
+            }
+        }
+        
         return obtenirRespostaPerDefecte(accio, parametres);
     }
 }
 
-// Funció auxiliar per obtenir dades reals
-async function obtenirDadesReals(accio, parametres) {
-    try {
-        let urlParams = '';
-        
-        if (accio === 'ferReserva') {
-            urlParams = Object.keys(parametres)
-                .map(key => `${key}=${encodeURIComponent(parametres[key])}`)
-                .join('&');
-        } else {
-            urlParams = `immoble=${parametres.immoble || 'Loft+Barcelona'}`;
-        }
-        
-        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(
-            `https://script.google.com/macros/s/AKfycbwvj0ARarualXfK-hnlD6qP027uZ-aDfVIA71IycSbgkZJ10pmvGhQsBVu12t-N1wV4Rg/exec?action=${accio}&immoble=${parametres.immoble || 'Loft+Barcelona'}`
-        );
-        
-        const response = await fetch(proxyUrl);
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('✅ Dades reals obtingudes:', data);
-            return data;
-        } else {
-            throw new Error(`Proxy error: ${response.status}`);
-        }
-        
-    } catch (error) {
-        console.log('No es poden obtenir dades reals:', error);
-        return obtenirDadesRealsPerDefecte(accio, parametres);
+// Mètode alternatiu per a reserves (usant POST)
+async function ferPeticioReservaAlternativa(parametres) {
+    console.log('🔄 Provant mètode alternatiu per reserva...');
+    
+    const dadesReserva = new URLSearchParams();
+    dadesReserva.append('action', 'ferReserva');
+    
+    Object.keys(parametres).forEach(key => {
+        dadesReserva.append(key, parametres[key]);
+    });
+    
+    const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: dadesReserva
+    });
+    
+    if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Resposta rebuda (mètode alternatiu):', data);
+        return data;
+    } else {
+        throw new Error(`Error POST: ${response.status}`);
     }
-}
-
-// Dades de prova més realistes
-function obtenirDadesRealsPerDefecte(accio, parametres) {
-    const avui = new Date();
-    const datesOcupades = [];
-    
-    const respostes = {
-        'obtenirDatesOcupades': { dates: datesOcupades },
-        'obtenirPreuImmoble': { 
-            preu: parametres.immoble === 'Loft Barcelona' ? 120 : 85 
-        },
-        'verificarDisponibilitat': { 
-            disponible: true,
-            missatge: '✅ Disponible'
-        },
-        'ferReserva': { 
-            exit: true,
-            missatge: '✅ Reserva realitzada correctament (mode prova)'
-        }
-    };
-    
-    return respostes[accio] || { error: 'Acció no reconeguda' };
 }
 
 // Funció auxiliar per respostes per defecte en cas d'error
 function obtenirRespostaPerDefecte(accio, parametres) {
+    console.log('🔄 Usant resposta per defecte per:', accio);
+    
     const respostes = {
         'obtenirDatesOcupades': { dates: [] },
         'obtenirPreuImmoble': { 
@@ -240,6 +211,7 @@ async function obtenirPreuImmoble() {
             preuPerNit = immobleSeleccionat === 'Loft Barcelona' ? 120 : 85;
         }
         
+        console.log('💰 Preu per nit:', preuPerNit);
         document.getElementById('resum-preu-nit').textContent = preuPerNit + ' €';
         
     } catch (error) {
@@ -625,6 +597,9 @@ async function ferReserva() {
         return;
     }
 
+    const nits = Math.ceil((dataFiSeleccionada - dataIniciSeleccionada) / (1000 * 60 * 60 * 24));
+    const preu_total = nits * preuPerNit;
+
     const dadesReserva = {
         nom: nom.trim(),
         email: email.trim(),
@@ -632,8 +607,8 @@ async function ferReserva() {
         immoble: immobleSeleccionat,
         data_inici: dataIniciSeleccionada.toISOString().split('T')[0],
         data_fi: dataFiSeleccionada.toISOString().split('T')[0],
-        nits: Math.ceil((dataFiSeleccionada - dataIniciSeleccionada) / (1000 * 60 * 60 * 24)),
-        preu_total: Math.ceil((dataFiSeleccionada - dataIniciSeleccionada) / (1000 * 60 * 60 * 24)) * preuPerNit
+        nits: nits,
+        preu_total: preu_total
     };
     
     console.log('📤 Dades de reserva enviades:', dadesReserva);
