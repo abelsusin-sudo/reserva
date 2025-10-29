@@ -627,13 +627,17 @@ async function ferReserva() {
             mostrarMissatge(missatgeDiv, resultat.missatge || '✅ Reserva realitzada amb èxit!', 'exit');
             mostrarModalReserva();
             
+            // Actualitzar les dates ocupades immediatament després de fer una reserva
+            setTimeout(() => {
+                carregarDatesOcupades(); // Actualitza el calendari amb la nova reserva
+            }, 1000);
+            
             setTimeout(() => {
                 document.getElementById('nom').value = '';
                 document.getElementById('email').value = '';
                 document.getElementById('telefon').value = '';
                 netejarSeleccions();
                 amagarFormulariReserva();
-                carregarDatesOcupades();
                 
                 setTimeout(() => {
                     mostrarSeccio('inici');
@@ -651,7 +655,6 @@ async function ferReserva() {
         btnReservar.textContent = '🚀 Fer Reserva';
     }
 }
-
 // Funció auxiliar per formatar dates
 function formatData(data) {
     return data.toLocaleDateString('ca-ES', {
